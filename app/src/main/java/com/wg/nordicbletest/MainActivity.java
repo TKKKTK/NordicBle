@@ -54,10 +54,6 @@ public class MainActivity extends AppCompatActivity implements DeviceAdapter.OnI
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
-//        final RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
-//        if (animator instanceof SimpleItemAnimator) {
-//            ((SimpleItemAnimator) animator).setSupportsChangeAnimations(false);
-//        }
 
         deviceAdapter = new DeviceAdapter(bleDevices);
         deviceAdapter.setOnItemClickListener(this);
@@ -138,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements DeviceAdapter.OnI
                 if (indexOf(bleDevice) == -1){
                     bleDevices.add(bleDevice);
                     deviceAdapter.notifyItemInserted(bleDevices.size()-1);
-                }
+            }
 
                 String name = bleDevice.getName();
                 String address = bleDevice.getAddress();
