@@ -58,7 +58,12 @@ public class MainActivity extends AppCompatActivity implements DeviceAdapter.OnI
         deviceAdapter = new DeviceAdapter(bleDevices);
         deviceAdapter.setOnItemClickListener(this);
         recyclerView.setAdapter(deviceAdapter);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopScan();
     }
 
     /**

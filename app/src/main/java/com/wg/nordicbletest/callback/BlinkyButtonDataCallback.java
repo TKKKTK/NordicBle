@@ -1,6 +1,9 @@
 package com.wg.nordicbletest.callback;
 
+import static android.content.ContentValues.TAG;
+
 import android.bluetooth.BluetoothDevice;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -18,6 +21,7 @@ public abstract class BlinkyButtonDataCallback implements ProfileDataCallback,Bl
             onInvalidDataReceived(device, data);
             return;
         }
+        Log.d(TAG, "onDataReceived: "+data.toString());
         final int state = data.getIntValue(Data.FORMAT_UINT8, 0);
         if (state == STATE_PRESSED) {
             onButtonStateChanged(device, true);
@@ -27,6 +31,5 @@ public abstract class BlinkyButtonDataCallback implements ProfileDataCallback,Bl
             onInvalidDataReceived(device, data);
         }
     }
-
 
 }

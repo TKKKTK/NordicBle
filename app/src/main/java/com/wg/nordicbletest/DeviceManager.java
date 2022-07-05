@@ -1,5 +1,7 @@
 package com.wg.nordicbletest;
 
+import static android.content.ContentValues.TAG;
+
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -12,7 +14,9 @@ import androidx.annotation.NonNull;
 
 import com.wg.nordicbletest.callback.BlinkyButtonDataCallback;
 import com.wg.nordicbletest.callback.BlinkyLedDataCallback;
+import com.wg.nordicbletest.callback.TwowaytoDataCallback;
 import com.wg.nordicbletest.data.BlinkyLED;
+import com.wg.nordicbletest.utils.TypeConversion;
 
 import java.util.UUID;
 
@@ -28,6 +32,12 @@ public class DeviceManager extends ObservableBleManager {
     /** LED characteristic UUID. */
     private final static UUID LBS_UUID_LED_CHAR = UUID.fromString("00001525-1212-efde-1523-785feabcd123");
 
+    //bt_patch(mtu).bin
+    public static final UUID SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");  //蓝牙通讯服务
+    public static final UUID READ_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");  //读特征
+    public static final UUID WRITE_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");  //写特征 //服务
+
+    private BluetoothGattCharacteristic readCharacter,writeCharacter;
     private BluetoothGattCharacteristic buttonCharacteristic,ledCharacteristic;
     private boolean supported;
     private boolean ledOn;
@@ -75,33 +85,64 @@ public class DeviceManager extends ObservableBleManager {
         }
     };
 
+    private final TwowaytoDataCallback twowaytoDataCallback = new TwowaytoDataCallback() {
+        @Override
+        public void onDataSent(@NonNull BluetoothDevice device, @NonNull Data data) {
+            super.onDataSent(device, data);
+            Log.d(TAG, "onDataSent: "+data);
+        }
+
+        @Override
+        public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
+            super.onDataReceived(device, data);
+            Log.d(TAG, "onDataReceived: "+data);
+        }
+    };
+
 
     private class DeviceBleManagerGattCallback extends BleManagerGattCallback{
 
         @Override
         protected void initialize() {
             super.initialize();
+
              setNotificationCallback(buttonCharacteristic).with(buttonDataCallback);
              readCharacteristic(ledCharacteristic).with(ledDataCallback).enqueue();
              readCharacteristic(buttonCharacteristic).with(buttonDataCallback).enqueue();
              enableNotifications(buttonCharacteristic).enqueue();
+             setNotificationCallback(readCharacter).with(twowaytoDataCallback);
+             readCharacteristic(readCharacter).with(twowaytoDataCallback).enqueue();
+             enableNotifications(readCharacter).enqueue();
         }
 
         @Override
         protected boolean isRequiredServiceSupported(@NonNull BluetoothGatt gatt) {
             final BluetoothGattService service = gatt.getService(LBS_UUID_SERVICE);
+            final BluetoothGattService twtService = gatt.getService(SERVICE_UUID);
             if (service != null) {
                 buttonCharacteristic = service.getCharacteristic(LBS_UUID_BUTTON_CHAR);
                 ledCharacteristic = service.getCharacteristic(LBS_UUID_LED_CHAR);
+
+                boolean writeRequest = false;
+                if (ledCharacteristic != null) {
+                    final int ledProperties = ledCharacteristic.getProperties();
+                    writeRequest = (ledProperties & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
+                }
+
+                supported = buttonCharacteristic != null && ledCharacteristic != null && writeRequest;
+            }else if (twtService != null){
+                readCharacter = twtService.getCharacteristic(READ_UUID);
+                writeCharacter = twtService.getCharacteristic(WRITE_UUID);
+
+                boolean twtWriteRequest = false;
+                if (writeCharacter != null){
+                    final int writeProperties = writeCharacter.getProperties();
+                    twtWriteRequest = (writeProperties & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
+                }
+
+                supported = readCharacter != null && writeCharacter != null && twtWriteRequest;
             }
 
-            boolean writeRequest = false;
-            if (ledCharacteristic != null) {
-                final int ledProperties = ledCharacteristic.getProperties();
-                writeRequest = (ledProperties & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
-            }
-
-            supported = buttonCharacteristic != null && ledCharacteristic != null && writeRequest;
             return supported;
         }
 
@@ -109,6 +150,8 @@ public class DeviceManager extends ObservableBleManager {
         protected void onServicesInvalidated() {
             buttonCharacteristic = null;
             ledCharacteristic = null;
+            readCharacter = null;
+            writeCharacter = null;
         }
     }
 
@@ -132,6 +175,14 @@ public class DeviceManager extends ObservableBleManager {
                 BlinkyLED.turn(on),
                 BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         ).with(ledDataCallback).enqueue();
+    }
+
+    public void Send(String hexString){
+          Data data = new Data(TypeConversion.hexString2Bytes(hexString));
+          writeCharacteristic(writeCharacter,
+                  data,
+                  BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                  ).with(twowaytoDataCallback).enqueue();
     }
 
 }

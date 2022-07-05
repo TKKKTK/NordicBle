@@ -1,6 +1,9 @@
 package com.wg.nordicbletest.callback;
 
+import static android.content.ContentValues.TAG;
+
 import android.bluetooth.BluetoothDevice;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -19,6 +22,7 @@ public abstract class BlinkyLedDataCallback implements ProfileDataCallback, Data
 
     @Override
     public void onDataSent(@NonNull BluetoothDevice device, @NonNull Data data) {
+        Log.d(TAG, "LEDonDataSent: "+data);
          parse(device,data);
     }
 

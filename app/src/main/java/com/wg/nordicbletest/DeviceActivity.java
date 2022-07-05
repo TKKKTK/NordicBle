@@ -9,7 +9,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -25,6 +27,8 @@ public class DeviceActivity extends AppCompatActivity implements UIChangeListene
     private Switch ledSwitch;
     private TextView ledText;
     private TextView buttonText;
+    private EditText editText;
+    private Button sendButton;
 
     public static final String EXTRA_DEVICE = "EXTRA_DEVICE";
     @Override
@@ -35,6 +39,8 @@ public class DeviceActivity extends AppCompatActivity implements UIChangeListene
         ledSwitch = (Switch) findViewById(R.id.led_switch);
         ledText = (TextView) findViewById(R.id.led_text);
         buttonText = (TextView) findViewById(R.id.button_text);
+        editText = (EditText) findViewById(R.id.imput_text);
+        sendButton = (Button) findViewById(R.id.send_button);
 
         final Intent intent = getIntent();
         device = intent.getParcelableExtra(EXTRA_DEVICE);
@@ -48,6 +54,15 @@ public class DeviceActivity extends AppCompatActivity implements UIChangeListene
                deviceManager.turnLed(isChecked);
            }
        });
+
+       sendButton.setOnClickListener(new View.OnClickListener() {
+           @Override
+           public void onClick(View view) {
+               deviceManager.Send(editText.getText().toString().trim());
+           }
+       });
+
+
     }
 
     public void connect(){
@@ -58,6 +73,24 @@ public class DeviceActivity extends AppCompatActivity implements UIChangeListene
                     .then(d -> connectRequest = null);
             connectRequest.enqueue();
         }
+    }
+
+    /**
+     *断开连接
+     */
+    public void disConnect(){
+        device = null;
+        if (connectRequest != null){
+            connectRequest.cancelPendingConnection();
+        }else if (deviceManager.isConnected()){
+            deviceManager.disconnect().enqueue();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        disConnect();
     }
 
     @Override
